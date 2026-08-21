@@ -3,7 +3,7 @@ import pixelGirl from '../assets/images/pixel_girl_8bit_1785916465260.jpg';
 import pixelKitten from '../assets/images/pixel_kitten_8bit_1785916481712.jpg';
 import pixelRobot from '../assets/images/pixel_robot_8bit_1785917923827.jpg';
 
-export default function Companion({ companion }: { companion: string | null }) {
+export default function Companion({ companion, mood = 0 }: { companion: string | null; mood?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [position, setPosition] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -18,18 +18,19 @@ export default function Companion({ companion }: { companion: string | null }) {
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      
+
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
-      
+
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
-      
+
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
+
         // Make white pixels transparent
         if (r > 230 && g > 230 && b > 230) {
           data[i + 3] = 0;
@@ -38,11 +39,12 @@ export default function Companion({ companion }: { companion: string | null }) {
           data[i + 3] = 128;
         } else if (companion === 'girl' && g > 100 && b > 100 && r < 180) {
           // Replace cyan/greenish skin with peach/flesh color
-          data[i] = 255;     // R
+          data[i] = 255; // R
           data[i + 1] = 218; // G
           data[i + 2] = 185; // B
         }
       }
+
       ctx.putImageData(imageData, 0, 0);
     };
   }, [companion]);
@@ -68,19 +70,26 @@ export default function Companion({ companion }: { companion: string | null }) {
 
   if (!companion) return null;
 
+  // mood: -1 (worst) to 1 (best). Only visually shift when trending negative,
+  // so a neutral/good run keeps the original clean sprite colors untouched.
+  const clampedMood = Math.max(-1, Math.min(1, mood));
+  const filterStyle = clampedMood < -0.15
+    ? `saturate(${Math.max(0.3, 1 + clampedMood * 0.6)}) hue-rotate(${clampedMood * 50}deg) brightness(${1 + clampedMood * 0.15})`
+    : 'none';
+
   return (
-    <div 
+    <div
       className="fixed bottom-0 z-40 pointer-events-none p-4 md:p-8"
-      style={{ 
+      style={{
         right: `calc(10% + ${position}px)`,
         transform: `scaleX(${direction === -1 ? -1 : 1})`,
         transition: 'right 0.1s linear'
       }}
     >
-      <canvas 
+      <canvas
         ref={canvasRef}
         className="w-32 h-32 sm:w-48 sm:h-48 md:w-56 md:h-56 object-contain image-rendering-pixelated animate-walk"
-        style={{ animationDuration: '0.6s' }}
+        style={{ animationDuration: '0.6s', filter: filterStyle, transition: 'filter 0.6s ease' }}
       />
     </div>
   );

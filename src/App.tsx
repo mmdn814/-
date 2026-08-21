@@ -1,22 +1,23 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import IntroScreen from './components/IntroScreen';
 import EventScreen from './components/EventScreen';
 import FeedbackScreen from './components/FeedbackScreen';
 import SummaryScreen from './components/SummaryScreen';
-import { generateGamePool } from './utils/gameLogic';
+import { generateGamePool, computeStats, getCompanionMood } from './utils/gameLogic';
 import { AppState, GameState } from './types';
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>('INTRO');
-  
   const [gameState, setGameState] = useState<GameState>({
     eventsPool: [],
     currentIndex: 0,
     history: [],
     companion: null
   });
-
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
+
+  const stats = useMemo(() => computeStats(gameState.history), [gameState.history]);
+  const mood = useMemo(() => getCompanionMood(gameState.companion, stats), [gameState.companion, stats]);
 
   const handleTimeout = useCallback(() => {
     setGameState(prev => {
@@ -64,7 +65,7 @@ export default function App() {
   const handleNext = useCallback(() => {
     const currentEvent = gameState.eventsPool[gameState.currentIndex];
     const selectedOption = currentEvent.options.find(o => o.id === selectedOptionId);
-    
+
     if (selectedOption) {
       setGameState(prev => ({
         ...prev,
@@ -108,15 +109,16 @@ export default function App() {
     <div className="min-h-screen bg-[#008080] text-black selection:bg-[#000080] selection:text-white overflow-x-hidden">
       {appState === 'INTRO' && <IntroScreen onStart={handleIntroProceed} />}
       {appState === 'EVENT' && gameState.eventsPool.length > 0 && (
-        <EventScreen 
+        <EventScreen
           key={gameState.eventsPool[gameState.currentIndex].id}
-          event={gameState.eventsPool[gameState.currentIndex]} 
+          event={gameState.eventsPool[gameState.currentIndex]}
           onSelect={handleOptionSelect}
           onTimeout={handleTimeout}
           onGiveUp={handleRestart}
           currentStep={gameState.currentIndex + 1}
           totalSteps={gameState.eventsPool.length}
           companion={gameState.companion}
+          mood={mood}
         />
       )}
       {appState === 'FEEDBACK' && gameState.eventsPool.length > 0 && selectedOptionId && (
@@ -126,10 +128,11 @@ export default function App() {
           selectedOptionId={selectedOptionId}
           onNext={handleNext}
           companion={gameState.companion}
+          mood={mood}
         />
       )}
       {appState === 'SUMMARY' && (
-        <SummaryScreen history={gameState.history} onRestart={handleRestart} />
+        <SummaryScreen history={gameState.history} companion={gameState.companion} onRestart={handleRestart} />
       )}
     </div>
   );

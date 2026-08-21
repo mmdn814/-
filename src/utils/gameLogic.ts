@@ -1,5 +1,5 @@
 import { allEvents } from '../data/events';
-import { GameEvent } from '../types';
+import { GameEvent, GameState } from '../types';
 
 // Helper to shuffle an array
 export function shuffle<T>(array: T[]): T[] {
@@ -28,4 +28,32 @@ export function generateGamePool(): GameEvent[] {
   });
 
   return selected;
+}
+
+// --- Added for companion emotional throughline ---
+
+export type Stats = { tech: number; human: number; equal: number; orthodox: number };
+
+export function computeStats(history: GameState['history']): Stats {
+  const stats: Stats = { tech: 0, human: 0, equal: 0, orthodox: 0 };
+  history.forEach(record => {
+    const event = allEvents.find(e => e.id === record.eventId);
+    const option = event?.options.find(o => o.id === record.optionId);
+    if (option) {
+      stats.tech += option.tech || 0;
+      stats.human += option.human || 0;
+      stats.equal += option.equal || 0;
+      stats.orthodox += option.orthodox || 0;
+    }
+  });
+  return stats;
+}
+
+// Maps the companion's bound axis score into a -1..1 mood value for Companion.tsx
+export function getCompanionMood(companion: string | null, stats: Stats): number {
+  if (!companion) return 0;
+  const axis = companion === 'girl' ? stats.human : companion === 'cat' ? stats.orthodox : stats.tech;
+  // Realistic axis range across a 10-question run is roughly -20..20; 15 keeps
+  // mood near -1/1 only once a run leans clearly negative/positive.
+  return Math.max(-1, Math.min(1, axis / 15));
 }

@@ -11,7 +11,8 @@ export default function EventScreen({
   onGiveUp,
   currentStep, 
   totalSteps,
-  companion
+  companion,
+  mood
 }: { 
   key?: string | number;
   event: GameEvent; 
@@ -21,6 +22,7 @@ export default function EventScreen({
   currentStep: number;
   totalSteps: number;
   companion: string | null;
+  mood?: number;
 }) {
   const [timeLeft, setTimeLeft] = useState(15);
   const [showOptions, setShowOptions] = useState(false);
@@ -258,7 +260,7 @@ export default function EventScreen({
         </div>
       )}
       {/* Fixed Companion */}
-      <Companion companion={companion} />
+      <Companion companion={companion} mood={mood} />
     </div>
   );
 }
