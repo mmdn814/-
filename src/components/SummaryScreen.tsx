@@ -266,7 +266,7 @@ export default function SummaryScreen({
             audio.playClick();
             alert("请截图保存这张文明画像！");
           }}
-          className="win95-button flex-1 py-2 text-sm md:text-base font-bold flex items-center justify-center gap-2 pixel-font bg-[#c0c0c0]"
+          className="win95-button flex-1 py-3 min-h-[48px] text-sm md:text-base font-bold flex items-center justify-center gap-2 pixel-font bg-[#c0c0c0] cursor-pointer hover:bg-[#dfdfdf] active:bg-[#a0a0a0]"
         >
           晒出文明画像
         </button>
@@ -275,7 +275,7 @@ export default function SummaryScreen({
             audio.playClick();
             onRestart();
           }}
-          className="win95-button flex-1 py-2 text-sm md:text-base font-bold flex items-center justify-center gap-2 pixel-font bg-[#c0c0c0]"
+          className="win95-button flex-1 py-3 min-h-[48px] text-sm md:text-base font-bold flex items-center justify-center gap-2 pixel-font bg-[#c0c0c0] cursor-pointer hover:bg-[#dfdfdf] active:bg-[#a0a0a0]"
         >
           还有23种结局
         </button>

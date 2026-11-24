@@ -287,7 +287,7 @@ export default function IntroScreen({ onStart }: { onStart: (companion: 'girl' |
                     />
                   </div>
                   <span className="pixel-font text-[10px] sm:text-base font-bold text-center z-10 relative group-hover:text-red-700">美丽的少女 (当前开放)</span>
-                  <button onClick={(e) => { e.stopPropagation(); handleStartClick('girl'); }} className="win95-button text-[10px] sm:text-base pixel-font px-2 sm:px-6 py-1 sm:py-2 hover:bg-[#dfdfdf] active:bg-[#a0a0a0] z-10 relative font-bold bg-[#ffffcc]">选择陪伴</button>
+                  <button onClick={(e) => { e.stopPropagation(); handleStartClick('girl'); }} className="win95-button text-xs sm:text-base pixel-font px-4 sm:px-6 py-2.5 min-h-[44px] hover:bg-[#dfdfdf] active:bg-[#a0a0a0] z-10 relative font-bold bg-[#ffffcc]">选择陪伴</button>
                 </div>
 
                 {/* Kitten (Locked for Prototype) */}

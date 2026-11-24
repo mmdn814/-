@@ -9,7 +9,9 @@ export default function FeedbackScreen({
   selectedOptionId, 
   onNext,
   companion,
-  mood
+  mood,
+  bond,
+  departed
 }: { 
   key?: string | number;
   event: GameEvent; 
@@ -17,6 +19,8 @@ export default function FeedbackScreen({
   onNext: () => void;
   companion: string | null;
   mood?: number;
+  bond?: number;
+  departed?: boolean;
 }) {
   const selectedOption = event.options.find(o => o.id === selectedOptionId)!;
   const [rewardCompleted, setRewardCompleted] = useState(false);
@@ -116,7 +120,7 @@ export default function FeedbackScreen({
         </div>
       </div>
       {/* Fixed Companion */}
-      <Companion companion={companion} mood={mood} />
+      <Companion companion={companion} mood={mood} bond={bond} departed={departed} />
     </div>
   );
 }

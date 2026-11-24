@@ -205,6 +205,8 @@ export default function App() {
           onNext={handleNext}
           companion={gameState.companion}
           mood={mood}
+          bond={gameState.companionState.bond}
+          departed={gameState.companionState.departed}
         />
       )}
       {appState === 'SUMMARY' && (
