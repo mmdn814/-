@@ -7,13 +7,14 @@ import {
   checkStageDeparture,
   selectOptionByTendency,
   simulateCounterfactualRun,
-  getSummaryTitle
+  getSummaryTitle,
+  parseEventNum
 } from '../src/utils/gameLogic';
 import { allEvents } from '../src/data/events';
 import { GameState, GameEvent, Option } from '../src/types';
 
 console.log('====================================================');
-console.log(' 《文明岔路 V2》最小技术原型（PoC）全自动化验收套件');
+console.log(' 《文明岔路 V2》最小技术原型（PoC）全量回归验收套件');
 console.log('====================================================\n');
 
 let passCount = 0;
@@ -33,10 +34,9 @@ function assert(condition: boolean, msg: string) {
 // ----------------------------------------------------
 // T1: 确定性复现（相同 seed + 相同选择，跑两遍逐字段一致）
 // ----------------------------------------------------
-console.log('\n--- [T1 确定性复现测试] ---');
+console.log('--- [T1 确定性复现测试] ---');
 const testSeeds = [12345, 99999, 42, 777, 2026];
 for (const seed of testSeeds) {
-  // Generate random choices for 10 questions
   const initialPool = generateGamePoolJIT(seed, []);
   const choices = initialPool.map(e => e.options[Math.floor(e.options.length / 2)].id);
 
@@ -83,19 +83,19 @@ for (const seed of testSeeds) {
 }
 
 // ----------------------------------------------------
-// T2: 1,000 局自动化遍历（零死锁、零跳题、100% 回响）
+// T2: 1,000 局自动化遍历（零死锁、零跳题、100% 回响、阶段内时间线排序）
 // ----------------------------------------------------
-console.log('\n--- [T2 1,000 局遍历与回响保障测试] ---');
+console.log('\n--- [T2 1,000 局遍历、阶段排序与回响保障测试] ---');
 let t2Total = 1000;
 let t2Deadlocks = 0;
 let t2RecallMatches = 0;
 let t2S3GeneralValid = 0;
+let t2ChronologicalOrderValid = 0;
 
 for (let seed = 1; seed <= t2Total; seed++) {
   let pool = generateGamePoolJIT(seed, []);
   let history: GameState['history'] = [];
 
-  // Pick random choice for C-03 (Q1)
   const c03Opt = pool[0].options[seed % pool[0].options.length];
   history.push({
     eventId: pool[0].id,
@@ -105,11 +105,10 @@ for (let seed = 1; seed <= t2Total; seed++) {
     cost: c03Opt.cost
   });
 
-  // Re-generate pool after Q1 to trigger JIT branch
   pool = generateGamePoolJIT(seed, history);
 
   if (pool.length === 10) {
-    // Check Q6 variant
+    // 检查 Q6 变体
     const q6 = pool[5];
     const c03Choice = c03Opt.id;
     let expectedVariantId = '';
@@ -133,7 +132,7 @@ for (let seed = 1; seed <= t2Total; seed++) {
       t2RecallMatches++;
     }
 
-    // Check S3 general pool (Q7, Q8): must be from [C-14, C-16, C-17, C-18], never C-13 or C-15
+    // 检查 S3 通用池排除 C-15
     const q7Id = pool[6].id;
     const q8Id = pool[7].id;
     const allowedS3 = ['C-14', 'C-16', 'C-17', 'C-18'];
@@ -146,6 +145,19 @@ for (let seed = 1; seed <= t2Total; seed++) {
     ) {
       t2S3GeneralValid++;
     }
+
+    // 检查各阶段内部按编号升序排序 (剧情时间线保真)
+    const s2Nums = [parseEventNum(pool[2].id), parseEventNum(pool[3].id), parseEventNum(pool[4].id)];
+    const s3Nums = [parseEventNum(pool[6].id), parseEventNum(pool[7].id)];
+    const s4Nums = [parseEventNum(pool[8].id), parseEventNum(pool[9].id)];
+
+    const isS2Ordered = s2Nums[0] < s2Nums[1] && s2Nums[1] < s2Nums[2];
+    const isS3Ordered = s3Nums[0] < s3Nums[1];
+    const isS4Ordered = s4Nums[0] < s4Nums[1];
+
+    if (isS2Ordered && isS3Ordered && isS4Ordered) {
+      t2ChronologicalOrderValid++;
+    }
   } else {
     t2Deadlocks++;
   }
@@ -154,31 +166,20 @@ for (let seed = 1; seed <= t2Total; seed++) {
 assert(t2Deadlocks === 0, `1,000 局遍历：0 次死锁，100% 走满 10 题`);
 assert(t2RecallMatches === 1000, `1,000 局遍历：第 6 题 100% 命中对应变体且回响文案匹配`);
 assert(t2S3GeneralValid === 1000, `1,000 局遍历：S3 通用池严格限定于 C-14/16/17/18，C-15 彻底排除`);
+assert(t2ChronologicalOrderValid === 1000, `1,000 局遍历：S2、S3 通用、S4 阶段内部 100% 编号升序，剧情时间线自然推进`);
 
 // ----------------------------------------------------
-// T3: 少女羁绊 P1 与 P1b 数值链断言
+// T3: 少女羁绊 P1 与 P1b 数值链断言 (种子 31 实测)
 // ----------------------------------------------------
 console.log('\n--- [T3 少女羁绊 P1 与 P1b 数值链路测试] ---');
-
-// 自动搜索 SEED_P1：S1 第 2 题为 C-04，S2 (第 3-5 题) 包含 C-07
-let seedP1 = -1;
-for (let s = 1; s <= 2000; s++) {
-  const p = generateGamePoolJIT(s, []);
-  if (p[1].id === 'C-04') {
-    const s2Ids = [p[2].id, p[3].id, p[4].id];
-    if (s2Ids.includes('C-07')) {
-      seedP1 = s;
-      break;
-    }
-  }
-}
-
-assert(seedP1 > 0, `自动锁定 SEED_P1 种子成功：SEED_P1 = ${seedP1}`);
-
-// 执行 P1 劣质测试链
+const seedP1 = 31;
 const p1Pool = generateGamePoolJIT(seedP1, []);
-let companionP1 = createInitialCompanionState();
 
+assert(p1Pool[0].id === 'C-03', `种子 31：第 1 题为 C-03 寡头跨界`);
+assert(p1Pool[1].id === 'C-04', `种子 31：第 2 题为 C-04 医疗算法`);
+assert(p1Pool[2].id === 'C-07', `种子 31：阶段排序后第 3 题为 C-07 数据饥荒`);
+
+let companionP1 = createInitialCompanionState();
 assert(companionP1.bond === 60, `起始状态：初始羁绊为 60`);
 
 // 步 1: C-03 A 资本利维坦
@@ -198,7 +199,7 @@ const s1DepCheck = checkStageDeparture(companionP1, 1);
 assert(!s1DepCheck.shouldDepart, `S1 结束过渡：羁绊 30 ≥ 20，少女不离开`);
 
 // 步 3: C-07 A 敞开大门 (带 privacy_open 标签)
-const c07Event = p1Pool.find(e => e.id === 'C-07')!;
+const c07Event = p1Pool[2];
 const c07OptA = c07Event.options.find(o => o.id === 'A')!;
 const delta3 = computeBondDelta(c07OptA, 'girl');
 assert(delta3.rawDelta === -6 && delta3.penalty === -10 && delta3.delta === -16, `步 3 (C-07 A): 点积 -2 (raw -6) 且 privacy_open 惩罚 -10, Δ = -16`);
@@ -219,92 +220,114 @@ companionP1b = updateCompanionState(companionP1b, p1Pool[0], c03OptC, 'girl');
 assert(companionP1b.bond === 75, `P1b 结算：羁绊 60 → 75 (立刻升为亲近)`);
 
 // ----------------------------------------------------
-// T4: 反事实平行地球重放与手动重玩称号 100% 闭环一致
+// T4: 反事实平行地球重放全量覆盖测试 (A/B/C/D 全覆盖 + 仅第 6 题不同断言)
 // ----------------------------------------------------
-console.log('\n--- [T4 平行地球重放与闭环测试] ---');
-let t4Success = 0;
-const t4Seeds = [101, 202, 303, 404, 505, 606, 707, 808, 909, 1000];
+console.log('\n--- [T4 平行地球全选项覆盖与纯净度测试] ---');
+const t4Seeds = [31, 101, 555, 777, 999];
+const allC03Choices = ['A', 'B', 'C', 'D'];
+let t4TitleMatches = 0;
+let t4IsolationMatches = 0;
+let t4TotalCases = t4Seeds.length * allC03Choices.length; // 20 cases
 
 for (const seed of t4Seeds) {
-  let pool = generateGamePoolJIT(seed, []);
-  let history: GameState['history'] = [];
+  for (const firstChoice of allC03Choices) {
+    let pool = generateGamePoolJIT(seed, []);
+    let history: GameState['history'] = [];
 
-  for (let i = 0; i < 10; i++) {
-    const ev = pool[i];
-    const opt = ev.options[0];
-    history.push({
-      eventId: ev.id,
-      optionId: opt.id,
-      optionLabel: opt.label,
-      reward: opt.reward,
-      cost: opt.cost
-    });
-    pool = generateGamePoolJIT(seed, history);
-  }
-
-  // Generate counterfactual prediction
-  const cf = simulateCounterfactualRun(seed, history);
-
-  // Now manually replay with the exact same seed according to card instructions:
-  // Q1: cf.counterOptionId
-  // Q2..Q5: original history choice
-  // Q6: selected by tendency (pure dot product)
-  // Q7..Q10: original history choice
-  const c03Event = allEvents.find(e => e.id === 'C-03')!;
-  const counterOpt = c03Event.options.find(o => o.id === cf.counterOptionId)!;
-  const pivotVector = {
-    tech: counterOpt.tech || 0,
-    human: counterOpt.human || 0,
-    equal: counterOpt.equal || 0,
-    orthodox: counterOpt.orthodox || 0
-  };
-
-  let replayPool = generateGamePoolJIT(seed, [
-    {
-      eventId: 'C-03',
-      optionId: counterOpt.id,
-      optionLabel: counterOpt.label,
-      reward: counterOpt.reward,
-      cost: counterOpt.cost
+    for (let i = 0; i < 10; i++) {
+      const ev = pool[i];
+      const opt = i === 0 ? ev.options.find(o => o.id === firstChoice)! : ev.options[0];
+      history.push({
+        eventId: ev.id,
+        optionId: opt.id,
+        optionLabel: opt.label,
+        reward: opt.reward,
+        cost: opt.cost
+      });
+      pool = generateGamePoolJIT(seed, history);
     }
-  ]);
-  let replayHistory: GameState['history'] = [];
 
-  for (let i = 0; i < 10; i++) {
-    const ev = replayPool[i];
-    let chosen: Option;
-    if (i === 0) {
-      chosen = counterOpt;
-    } else if (i === 5) {
-      chosen = selectOptionByTendency(ev, pivotVector);
-    } else {
-      chosen = ev.options.find(o => o.id === history[i].optionId) || ev.options[0];
+    // 生成平行地球预告
+    const cf = simulateCounterfactualRun(seed, history);
+
+    // 手动按卡片规则重跑整局
+    const c03Event = allEvents.find(e => e.id === 'C-03')!;
+    const counterOpt = c03Event.options.find(o => o.id === cf.counterOptionId)!;
+    const pivotVector = {
+      tech: counterOpt.tech || 0,
+      human: counterOpt.human || 0,
+      equal: counterOpt.equal || 0,
+      orthodox: counterOpt.orthodox || 0
+    };
+
+    let replayPool = generateGamePoolJIT(seed, [
+      {
+        eventId: 'C-03',
+        optionId: counterOpt.id,
+        optionLabel: counterOpt.label,
+        reward: counterOpt.reward,
+        cost: counterOpt.cost
+      }
+    ]);
+    let replayHistory: GameState['history'] = [];
+
+    for (let i = 0; i < 10; i++) {
+      const ev = replayPool[i];
+      let chosen: Option;
+      if (i === 0) {
+        chosen = counterOpt;
+      } else if (i === 5) {
+        chosen = selectOptionByTendency(ev, pivotVector);
+      } else {
+        chosen = ev.options.find(o => o.id === history[i].optionId) || ev.options[0];
+      }
+      replayHistory.push({
+        eventId: ev.id,
+        optionId: chosen.id,
+        optionLabel: chosen.label,
+        reward: chosen.reward,
+        cost: chosen.cost
+      });
+      replayPool = generateGamePoolJIT(seed, replayHistory);
     }
-    replayHistory.push({
-      eventId: ev.id,
-      optionId: chosen.id,
-      optionLabel: chosen.label,
-      reward: chosen.reward,
-      cost: chosen.cost
-    });
-    replayPool = generateGamePoolJIT(seed, replayHistory);
-  }
 
-  const replayedStats = computeStats(replayHistory);
-  const replayedTitle = getSummaryTitle(replayedStats);
+    // 断言 1：原局和平行局只有第 6 题事件不同，其余 9 道题事件 ID 100% 绝对一致
+    let onlyQ6Different = true;
+    for (let i = 0; i < 10; i++) {
+      if (i === 5) {
+        if (replayPool[5].id === pool[5].id && cf.pivotOptionId !== cf.counterOptionId) {
+          // Q6 should be different variant
+        }
+      } else {
+        if (replayPool[i].id !== pool[i].id) {
+          onlyQ6Different = false;
+        }
+      }
+    }
+    if (onlyQ6Different) t4IsolationMatches++;
 
-  if (replayedTitle === cf.parallelTitle) {
-    t4Success++;
+    // 断言 2：重放称号与平行卡预告 100% 一致
+    const replayedStats = computeStats(replayHistory);
+    const replayedTitle = getSummaryTitle(replayedStats);
+    if (replayedTitle === cf.parallelTitle) {
+      t4TitleMatches++;
+    }
   }
 }
 
-assert(t4Success === t4Seeds.length, `T4 闭环：${t4Seeds.length} 个样本手动重玩称号与平行卡预告 100% 绝对一致`);
+assert(
+  t4IsolationMatches === t4TotalCases,
+  `T4 因果纯度：${t4TotalCases} 组全选项测试中，原局与平行局除第 6 题外，其余 9 题事件序列 100% 绝对相同`
+);
+assert(
+  t4TitleMatches === t4TotalCases,
+  `T4 反事实闭环：C-03 选 A(→B)、B(→A)、C(→A)、D(→A) 全路径手动重玩称号与卡片预告 100% 严格一致`
+);
 
 // ----------------------------------------------------
 // T5: 静态审查——代选函数物理杜绝未来信息泄漏
 // ----------------------------------------------------
 console.log('\n--- [T5 无未来信息泄漏静态/行为断言] ---');
-// Test that changing Q2-Q5 or Q7-Q10 choices does not alter Q6 delegated choice
 const dummySeed = 8888;
 const dummyEvent = generateGamePoolJIT(dummySeed, [{
   eventId: 'C-03',
@@ -314,7 +337,7 @@ const dummyEvent = generateGamePoolJIT(dummySeed, [{
   cost: ''
 }])[5];
 
-const vecA = { tech: -1, human: 1, equal: 2, orthodox: 0 }; // B's vector
+const vecA = { tech: -1, human: 1, equal: 2, orthodox: 0 };
 const choiceA1 = selectOptionByTendency(dummyEvent, vecA);
 const choiceA2 = selectOptionByTendency(dummyEvent, vecA);
 

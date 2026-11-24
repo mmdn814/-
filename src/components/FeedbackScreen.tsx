@@ -108,7 +108,7 @@ export default function FeedbackScreen({
           </div>
 
           <div className={`flex justify-end w-full transition-opacity duration-300 ${showNext ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-             <button onClick={handleNext} className="win95-button text-sm md:text-base pixel-font px-8">
+             <button onClick={handleNext} className="win95-button text-sm md:text-base pixel-font px-8 py-3 min-h-[48px] font-bold cursor-pointer hover:bg-[#dfdfdf] active:bg-[#a0a0a0]">
                确认并继续
              </button>
           </div>

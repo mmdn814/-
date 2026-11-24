@@ -97,8 +97,7 @@ export default function EventScreen({
           
           {/* Recall Banner (First screen visible) */}
           {event.recall && (
-            <div className="win95-inset bg-[#ffffcc] p-2.5 mb-2.5 text-black pixel-font text-xs sm:text-sm font-bold flex items-center gap-2 border-l-4 border-l-[#d4b106] shadow-sm">
-              <span className="text-base select-none shrink-0">📎</span>
+            <div className="win95-inset bg-[#ffffcc] p-2.5 mb-2.5 text-black pixel-font text-xs sm:text-sm font-bold flex items-center border-l-4 border-l-[#d4b106] shadow-sm">
               <span className="leading-tight">{event.recall}</span>
             </div>
           )}

@@ -277,7 +277,7 @@ export default function IntroScreen({ onStart }: { onStart: (companion: 'girl' |
               {/* Choices Area */}
               <div className={`flex flex-row justify-center w-full gap-2 sm:gap-8 transition-opacity duration-300 ${showButtons ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 
-                {/* Girl */}
+                {/* Girl (Active in Prototype) */}
                 <div className="flex flex-col items-center gap-1 sm:gap-4 group cursor-pointer" onClick={() => handleStartClick('girl')}>
                   <div className="w-20 h-20 sm:w-40 sm:h-40 md:w-48 md:h-48 flex items-center justify-center overflow-visible transition-transform duration-200 group-hover:scale-110 group-hover:-translate-y-2 mix-blend-multiply">
                     <img 
@@ -286,34 +286,34 @@ export default function IntroScreen({ onStart }: { onStart: (companion: 'girl' |
                       className="max-w-full max-h-full object-contain image-rendering-pixelated scale-[1.5] origin-bottom pointer-events-none select-none"
                     />
                   </div>
-                  <span className="pixel-font text-[10px] sm:text-base font-bold text-center z-10 relative group-hover:text-red-700">美丽的少女</span>
-                  <button onClick={(e) => { e.stopPropagation(); handleStartClick('girl'); }} className="win95-button text-[10px] sm:text-base pixel-font px-2 sm:px-6 py-1 sm:py-2 hover:bg-[#dfdfdf] active:bg-[#a0a0a0] z-10 relative font-bold">选择陪伴</button>
+                  <span className="pixel-font text-[10px] sm:text-base font-bold text-center z-10 relative group-hover:text-red-700">美丽的少女 (当前开放)</span>
+                  <button onClick={(e) => { e.stopPropagation(); handleStartClick('girl'); }} className="win95-button text-[10px] sm:text-base pixel-font px-2 sm:px-6 py-1 sm:py-2 hover:bg-[#dfdfdf] active:bg-[#a0a0a0] z-10 relative font-bold bg-[#ffffcc]">选择陪伴</button>
                 </div>
 
-                {/* Kitten */}
-                <div className="flex flex-col items-center gap-1 sm:gap-4 group cursor-pointer" onClick={() => handleStartClick('cat')}>
-                  <div className="w-20 h-20 sm:w-40 sm:h-40 md:w-48 md:h-48 flex items-center justify-center overflow-visible transition-transform duration-200 group-hover:scale-110 group-hover:-translate-y-2 mix-blend-multiply">
+                {/* Kitten (Locked for Prototype) */}
+                <div className="flex flex-col items-center gap-1 sm:gap-4 opacity-40 grayscale cursor-not-allowed">
+                  <div className="w-20 h-20 sm:w-40 sm:h-40 md:w-48 md:h-48 flex items-center justify-center overflow-visible mix-blend-multiply">
                     <img 
                       src={pixelKitten} 
                       alt="可爱的小猫" 
                       className="max-w-full max-h-full object-contain image-rendering-pixelated scale-[1.5] origin-bottom pointer-events-none select-none"
                     />
                   </div>
-                  <span className="pixel-font text-[10px] sm:text-base font-bold text-center z-10 relative group-hover:text-red-700">可爱的小猫</span>
-                  <button onClick={(e) => { e.stopPropagation(); handleStartClick('cat'); }} className="win95-button text-[10px] sm:text-base pixel-font px-2 sm:px-6 py-1 sm:py-2 hover:bg-[#dfdfdf] active:bg-[#a0a0a0] z-10 relative font-bold">选择陪伴</button>
+                  <span className="pixel-font text-[10px] sm:text-base font-bold text-center z-10 relative text-gray-700">可爱的小猫 [暂未开放]</span>
+                  <button disabled className="win95-button text-[10px] sm:text-base pixel-font px-2 sm:px-4 py-1 sm:py-2 opacity-60 cursor-not-allowed z-10 relative">V2 完整版解锁</button>
                 </div>
 
-                {/* Robot */}
-                <div className="flex flex-col items-center gap-1 sm:gap-4 group cursor-pointer" onClick={() => handleStartClick('robot')}>
-                  <div className="w-20 h-20 sm:w-40 sm:h-40 md:w-48 md:h-48 flex items-center justify-center overflow-visible transition-transform duration-200 group-hover:scale-110 group-hover:-translate-y-2 mix-blend-multiply">
+                {/* Robot (Locked for Prototype) */}
+                <div className="flex flex-col items-center gap-1 sm:gap-4 opacity-40 grayscale cursor-not-allowed">
+                  <div className="w-20 h-20 sm:w-40 sm:h-40 md:w-48 md:h-48 flex items-center justify-center overflow-visible mix-blend-multiply">
                     <img 
                       src={pixelRobot} 
                       alt="老旧的机器人" 
                       className="max-w-full max-h-full object-contain image-rendering-pixelated scale-[1.5] origin-bottom pointer-events-none select-none"
                     />
                   </div>
-                  <span className="pixel-font text-[10px] sm:text-base font-bold text-center z-10 relative group-hover:text-red-700">老旧的机器人</span>
-                  <button onClick={(e) => { e.stopPropagation(); handleStartClick('robot'); }} className="win95-button text-[10px] sm:text-base pixel-font px-2 sm:px-6 py-1 sm:py-2 hover:bg-[#dfdfdf] active:bg-[#a0a0a0] z-10 relative font-bold">选择陪伴</button>
+                  <span className="pixel-font text-[10px] sm:text-base font-bold text-center z-10 relative text-gray-700">老旧的机器人 [暂未开放]</span>
+                  <button disabled className="win95-button text-[10px] sm:text-base pixel-font px-2 sm:px-4 py-1 sm:py-2 opacity-60 cursor-not-allowed z-10 relative">V2 完整版解锁</button>
                 </div>
 
               </div>

@@ -96,13 +96,13 @@ export default function App() {
     }
   }, [gameState.currentIndex, gameState.eventsPool.length]);
 
-  const handleIntroProceed = useCallback((companion: 'girl' | 'cat' | 'robot') => {
+  const handleIntroProceed = useCallback((_companion: 'girl' | 'cat' | 'robot') => {
     const pool = generateGamePoolJIT(initialSeed, []);
     setGameState({
       eventsPool: pool,
       currentIndex: 0,
       history: [],
-      companion: companion,
+      companion: 'girl',
       companionState: createInitialCompanionState(),
       seed: initialSeed
     });

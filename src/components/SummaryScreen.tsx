@@ -229,7 +229,7 @@ export default function SummaryScreen({
                       {parallelResult.companionFate}
                     </span>
                   </div>
-                  <div className="text-[10px] text-gray-500 pt-1 border-t border-gray-300 italic">
+                  <div className="text-xs text-gray-800 pt-1.5 border-t border-gray-300 font-medium leading-relaxed">
                     * {parallelResult.note}
                   </div>
                 </div>

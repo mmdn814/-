@@ -39,6 +39,15 @@ export function getC13Variant(c03OptionId?: string): GameEvent {
   return C13_VARIANTS.corp; // fallback
 }
 
+// Helper to parse numeric part of event ID (e.g. "C-01" -> 1, "C-13α" -> 13)
+export function parseEventNum(id: string): number {
+  return parseInt(id.replace(/[^0-9]/g, ''), 10) || 0;
+}
+
+export function sortEventsById(events: GameEvent[]): GameEvent[] {
+  return [...events].sort((a, b) => parseEventNum(a.id) - parseEventNum(b.id));
+}
+
 export function generateGamePoolJIT(seed: number, history: GameState['history'] = []): GameEvent[] {
   // Patched base events
   const patchedEvents = allEvents.map(patchEventTags);
@@ -50,12 +59,13 @@ export function generateGamePoolJIT(seed: number, history: GameState['history'] 
   const s1Picked = seededShuffle(s1Remaining, rngS1).slice(0, 1);
   const stage1 = [c03, s1Picked[0]];
 
-  // Stage 2 (3 questions): drawn from S2 events (C-07 to C-12)
+  // Stage 2 (3 questions): drawn from S2 events (C-07 to C-12), sorted chronologically by ID
   const s2Events = patchedEvents.filter(e => e.stage === 2);
   const rngS2 = mulberry32(hashPositional(seed, 2, 0));
-  const stage2 = seededShuffle(s2Events, rngS2).slice(0, 3);
+  const s2Picked = seededShuffle(s2Events, rngS2).slice(0, 3);
+  const stage2 = sortEventsById(s2Picked);
 
-  // Stage 3 (3 questions): Q6 is C-13 variant; Q7-Q8 from fixed pool [C-14, C-16, C-17, C-18]
+  // Stage 3 (3 questions): Q6 is fixed C-13 variant; Q7-Q8 from fixed pool [C-14, C-16, C-17, C-18] sorted chronologically
   const c03Record = history.find(h => h.eventId === 'C-03');
   const c13Variant = getC13Variant(c03Record?.optionId);
 
@@ -65,12 +75,13 @@ export function generateGamePoolJIT(seed: number, history: GameState['history'] 
   );
   const rngS3 = mulberry32(hashPositional(seed, 3, 1));
   const s3GeneralPicked = seededShuffle(s3GeneralPool, rngS3).slice(0, 2);
-  const stage3 = [c13Variant, s3GeneralPicked[0], s3GeneralPicked[1]];
+  const stage3 = [c13Variant, ...sortEventsById(s3GeneralPicked)];
 
-  // Stage 4 (2 questions): drawn from S4 events (C-19 to C-24)
+  // Stage 4 (2 questions): drawn from S4 events (C-19 to C-24), sorted chronologically by ID
   const s4Events = patchedEvents.filter(e => e.stage === 4);
   const rngS4 = mulberry32(hashPositional(seed, 4, 0));
-  const stage4 = seededShuffle(s4Events, rngS4).slice(0, 2);
+  const s4Picked = seededShuffle(s4Events, rngS4).slice(0, 2);
+  const stage4 = sortEventsById(s4Picked);
 
   return [...stage1, ...stage2, ...stage3, ...stage4];
 }
