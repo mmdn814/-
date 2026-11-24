@@ -1,33 +1,9 @@
-import { GameState } from '../types';
-import { useMemo, useEffect, useState } from 'react';
-import { Share2, RotateCcw } from 'lucide-react';
+import { GameState, CompanionState } from '../types';
+import { useMemo, useEffect } from 'react';
 import { audio } from '../utils/audio';
 import { allEvents } from '../data/events';
-import { computeStats, Stats } from '../utils/gameLogic';
-
-const PREFIXES = [
-  { text: "折叠的", condition: (s: any) => s.tech > 5 && s.equal < -5 },
-  { text: "寡头的", condition: (s: any) => s.equal < -8 },
-  { text: "废土上的", condition: (s: any) => s.tech < -5 && s.human < 0 },
-  { text: "数字", condition: (s: any) => s.tech > 5 },
-  { text: "觉醒的", condition: (s: any) => s.human > 0 && s.equal > 0 },
-  { text: "沉默的", condition: (s: any) => s.equal < -5 },
-  { text: "冰冷的", condition: (s: any) => s.human < -5 },
-  { text: "温柔的", condition: (s: any) => s.human > 5 },
-  { text: "众生的", condition: (s: any) => s.equal > 5 },
-];
-
-const SUFFIXES = [
-  { text: "算法利维坦", condition: (s: any) => s.tech > 5 && s.equal < -5 },
-  { text: "蜂巢共同体", condition: (s: any) => s.tech > 5 && s.equal > 5 },
-  { text: "永生债务人", condition: (s: any) => s.tech > 5 && s.equal < -5 && s.human < 0 },
-  { text: "硅基先知", condition: (s: any) => s.tech > 8 },
-  { text: "最后的人类议会", condition: (s: any) => s.orthodox > 0 && s.human > 5 },
-  { text: "数字封建庄园", condition: (s: any) => s.tech > 0 && s.equal < -8 },
-  { text: "平权自治体", condition: (s: any) => s.equal > 5 && s.tech <= 5 },
-  { text: "碳基保护区", condition: (s: any) => s.orthodox > 5 },
-  { text: "星际弃儿", condition: (s: any) => s.tech < -5 },
-];
+import { computeStats, Stats, getCompanionMood, simulateCounterfactualRun, PREFIXES, SUFFIXES } from '../utils/gameLogic';
+import CompanionPortrait from './CompanionPortrait';
 
 const QUOTES = [
   { text: "“效率是你的信仰，代价是别人的骨头。”", condition: (s: any) => s.tech > 8 && s.human < -5 },
@@ -51,9 +27,9 @@ const COMPANION_AXIS: Record<string, keyof Stats> = {
 
 const COMPANION_FATE: Record<string, { pos: string; neu: string; neg: string }> = {
   girl: {
-    pos: "她还在你身边，眼神比出发时更亮了一些。至少在这个文明的账本里，'人'这个字没有被划掉。",
-    neu: "她一直安静地跟着，像是在等一个你没能给出的承诺。旅途结束时，她只是笑了笑，什么也没说。",
-    neg: "她在某次确认执行后不再说话。你后来才明白，那个选项没有留给'她'活下去的理由。"
+    pos: "她一直在你身边，眼神清亮。在这个文明的最终账本里，'人'这个字被好好保留了下来。",
+    neu: "她一直安静地跟着，看着这个文明一步步走到了终局。",
+    neg: "她虽然留到了最后，但眼底的光芒早已熄灭。她不知该如何评价你创造的世界。"
   },
   cat: {
     pos: "小猫窝在你怀里睡着了，呼吸均匀。这个世界还留着一点，可以被称为'自然'的东西。",
@@ -70,14 +46,16 @@ const COMPANION_FATE: Record<string, { pos: string; neu: string; neg: string }> 
 export default function SummaryScreen({
   history,
   companion,
+  companionState,
+  seed = 12345,
   onRestart
 }: {
   history: GameState['history'];
   companion: string | null;
+  companionState?: CompanionState;
+  seed?: number;
   onRestart: () => void;
 }) {
-  const [rarity] = useState(() => (Math.random() * 5 + 0.1).toFixed(1));
-
   const stats = useMemo(() => computeStats(history), [history]);
 
   const { title, quote, traits } = useMemo(() => {
@@ -97,6 +75,11 @@ export default function SummaryScreen({
     };
   }, [stats]);
 
+  const moodVal = useMemo(
+    () => getCompanionMood(companion, stats, companionState?.bond),
+    [companion, stats, companionState?.bond]
+  );
+
   const fateText = useMemo(() => {
     if (!companion) return null;
     const axis = COMPANION_AXIS[companion];
@@ -106,6 +89,12 @@ export default function SummaryScreen({
     if (!fate) return null;
     return val >= 5 ? fate.pos : val <= -5 ? fate.neg : fate.neu;
   }, [companion, stats]);
+
+  // Compute Parallel Earth Counterfactual
+  const parallelResult = useMemo(() => {
+    if (history.length === 0) return null;
+    return simulateCounterfactualRun(seed, history);
+  }, [seed, history]);
 
   // Pick defining moments
   const definingMoments = useMemo(() => {
@@ -122,6 +111,9 @@ export default function SummaryScreen({
   const pH = `${50 + (mapToPercentage(stats.human)/100)*40},50`;
   const pE = `50,${50 + (mapToPercentage(stats.equal)/100)*40}`;
   const pO = `${50 - (mapToPercentage(stats.orthodox)/100)*40},50`;
+
+  const isDeparted = companionState?.departed;
+  const worstMemoryLabel = companionState?.memory.worst?.optionLabel;
 
   return (
     <div className="min-h-screen bg-[#008080] flex flex-col items-center justify-center py-6 px-4 md:px-8 selection:bg-[#000080] selection:text-white">
@@ -145,8 +137,9 @@ export default function SummaryScreen({
               <h2 className="text-xl md:text-2xl font-bold mb-1 pixel-font">
                 {title}
               </h2>
+              {/* Removed fake percentage: Honest attribution */}
               <div className="text-xs md:text-sm text-gray-700 pixel-font mb-4">
-                全服仅 <span className="font-bold text-black">{rarity}%</span> 玩家抵达此结局
+                基于历史因果推导生成的文明终局画像
               </div>
               <div className="font-bold italic text-sm md:text-base px-2 py-2 bg-black text-white pixel-font inline-block">
                 {quote}
@@ -181,13 +174,69 @@ export default function SummaryScreen({
               </svg>
             </div>
 
-            {/* Companion Fate */}
-            {fateText && (
-              <div className="win95-inset bg-[#f5f5f5] p-3 mb-6 text-xs md:text-sm pixel-font leading-relaxed text-center">
-                {fateText}
+            {/* Companion Fate with Portrait */}
+            {isDeparted ? (
+              <div className="win95-inset bg-[#fbeaea] border-l-4 border-l-red-600 p-3 mb-6 text-xs md:text-sm pixel-font leading-relaxed flex items-center gap-3">
+                <div className="opacity-30 grayscale shrink-0">
+                  <CompanionPortrait companion={companion} mood={-1} size={54} />
+                </div>
+                <div className="text-left text-red-900">
+                  <div className="font-bold mb-0.5">【决裂离去】</div>
+                  <div>
+                    {worstMemoryLabel ? `「${worstMemoryLabel}」` : '那次决定'}之后，她再也没有回来。窗口旁的位置永远空着。
+                  </div>
+                </div>
+              </div>
+            ) : (
+              fateText && (
+                <div className="win95-inset bg-[#f5f5f5] border-l-4 border-l-blue-600 p-3 mb-6 text-xs md:text-sm pixel-font leading-relaxed flex items-center gap-3 text-left">
+                  <CompanionPortrait companion={companion} mood={moodVal} size={54} />
+                  <div>
+                    <div className="font-bold mb-0.5">【{companion === 'girl' ? '少女命运' : '伙伴结局'}】</div>
+                    <div>{fateText}</div>
+                  </div>
+                </div>
+              )
+            )}
+
+            {/* Parallel Earth Counterfactual Card */}
+            {parallelResult && (
+              <div className="win95-window p-3 mb-6 bg-[#f0f4f8] border-2 border-dashed border-[#000080]/60">
+                <div className="font-bold pixel-font text-xs sm:text-sm border-b border-gray-400 pb-1 mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-[#000080]">
+                    <span>🌍</span> 平行地球反事实对照
+                  </span>
+                  <span className="text-[10px] bg-blue-100 text-blue-800 px-1 py-0.5 border border-blue-400 font-normal">
+                    同种子纯函数重放
+                  </span>
+                </div>
+                <div className="pixel-font text-xs sm:text-sm text-gray-800 space-y-1.5 text-left">
+                  <div>
+                    <span className="font-bold">分水岭对照：</span>
+                    如果你在第 1 题【{parallelResult.pivotOptionLabel}】改选为【<span className="text-blue-700 font-bold">{parallelResult.counterOptionLabel}</span>】
+                  </div>
+                  <div>
+                    <span className="font-bold">衍生分支：</span>
+                    第 6 题将会触发【<span className="text-purple-700 font-bold">{parallelResult.divergentEventTitle}</span>】
+                  </div>
+                  <div>
+                    <span className="font-bold">平行结局：</span>
+                    文明称号走向【<span className="text-black font-bold">{parallelResult.parallelTitle}</span>】
+                  </div>
+                  <div>
+                    <span className="font-bold">少女命运：</span>
+                    <span className={parallelResult.companionFate === '决裂离开' ? 'text-red-700 font-bold' : 'text-green-700 font-bold'}>
+                      {parallelResult.companionFate}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-gray-500 pt-1 border-t border-gray-300 italic">
+                    * {parallelResult.note}
+                  </div>
+                </div>
               </div>
             )}
 
+            {/* Defining Moments */}
             <div className="border-t border-black pt-4">
               <h3 className="text-sm font-bold mb-3 pixel-font">关键决策</h3>
               <div className="space-y-2">
